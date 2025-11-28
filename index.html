@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nordstrom.ws</title>
+
+    <!-- marked.js for rendering blog posts from markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* 
+         * Iosevka Nerd Font, using light as base weight since it looks cleaner
+         */
+        @font-face {
+            font-family: 'Iosevka Nerd';
+            src: url('fonts/IosevkaNerdFont-Light.ttf') format('truetype');
+            font-weight: 300;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Iosevka Nerd';
+            src: url('fonts/IosevkaNerdFont-Medium.ttf') format('truetype');
+            font-weight: 500;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Iosevka Nerd';
+            src: url('fonts/IosevkaNerdFont-Bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Iosevka Nerd';
+            src: url('fonts/IosevkaNerdFont-Italic.ttf') format('truetype');
+            font-weight: 300;
+            font-style: italic;
+        }
+        
+        /* 
+         * color palette, keeping it simple
+         * dark bg + yellow accent, tried other colors but looked messy
+         */
+        :root {
+            --bg: #09090b;
+            --surface: #0f0f12;
+            --surface-2: #16161a;
+            --border: #27272a;
+            --text: #e4e4e7;
+            --text-dim: #71717a;
+            --accent: #facc15;
+            --accent-dim: rgba(250, 204, 21, 0.1);
+        }
+        
+        /* reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html { font-size: 15px; scroll-behavior: smooth; }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Iosevka Nerd', monospace;
+            font-weight: 300;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        /* yellow highlight when selecting text */
+        ::selection { background: var(--accent); color: var(--bg); }
+        
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        
+
+        /* main wrapper 720px is good */
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+        
+        /* Header */
+        .header {
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.25rem;
+        }
+        
+        .logo span { color: var(--accent); }
+        
+        .tagline {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        /* nav bar - simple horizontal links */
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin: 2rem 0 3rem;
+            padding: 1rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .nav a {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            transition: all 0.15s;
+            cursor: pointer;
+        }
+        
+        .nav a:hover {
+            color: var(--text);
+            background: var(--surface);
+            text-decoration: none;
+        }
+        
+        .nav a.active {
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+        
+        /* page switching (only show active page) */
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.2s; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* sections have that line extending from the title */
+        .section {
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        /* line */
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        
+        /* about section */
+        .about p {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            margin-bottom: 1.5rem;
+        }
+        
+        .about .highlight { color: var(--accent); }
+        
+        .tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.35rem 0.75rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-dim);
+            transition: all 0.15s;
+        }
+        
+        .tag:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        /* 
+         * status bar at top of home page
+         * shows uptime, location, etc
+         */
+        .status-bar {
+            display: flex;
+            gap: 2rem;
+            padding: 1rem 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-label { color: var(--text-dim); }
+        .status-value { color: var(--text); }
+        .status-value.accent { color: var(--accent); }
+        
+        /* pulsing online indicator */
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        
+        /* "currently" section */
+        .now-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .now-item {
+            padding: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        
+        .now-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+        
+        .now-value {
+            font-size: 0.9rem;
+        }
+        
+        /* focus card */
+        .focus-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            border-left: 3px solid var(--accent);
+        }
+        
+        .focus-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .focus-icon {
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+        
+        .focus-name {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        
+        .focus-tag {
+            font-size: 0.6rem;
+            padding: 0.2rem 0.5rem;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: pulse 2s infinite;
+        }
+        
+        .focus-desc {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        
+        .focus-progress {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--surface-2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #fde047);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-text {
+            font-size: 0.75rem;
+            color: var(--accent);
+            min-width: 90px;
+        }
+        
+        .focus-stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+        
+        /* milestones - clean timeline */
+        .milestones {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        .milestone {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+        
+        .milestone:last-child {
+            border-bottom: none;
+        }
+        
+        .milestone-year {
+            color: var(--accent);
+            font-weight: 500;
+            min-width: 50px;
+        }
+        
+        .milestone-text {
+            color: var(--text-dim);
+        }
+        
+        /* blog post list - slides right on hover */
+        .post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .post-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .post-item:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+        
+        .post-date {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            min-width: 80px;
+        }
+        
+        .post-title {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        .post-tag {
+            font-size: 0.65rem;
+            color: var(--accent);
+            padding: 0.2rem 0.5rem;
+            background: var(--accent-dim);
+            border-radius: 3px;
+        }
+        
+        /* Blog article */
+        .blog-back {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+        
+        .blog-back:hover { color: var(--accent); }
+        
+        .blog-article {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2.5rem;
+        }
+        
+        .blog-meta {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .blog-body h1 { font-size: 1.4rem; margin-bottom: 1.5rem; font-weight: 600; }
+        .blog-body h2 { font-size: 1.1rem; color: var(--accent); margin: 2rem 0 1rem; font-weight: 500; }
+        .blog-body p { color: var(--text-dim); margin-bottom: 1rem; }
+        .blog-body code { background: var(--surface-2); padding: 0.2rem 0.4rem; border-radius: 3px; font-family: inherit; font-size: 0.9em; }
+        .blog-body pre { background: var(--surface-2); padding: 1.25rem; border-radius: 6px; margin: 1.5rem 0; overflow-x: auto; border-left: 3px solid var(--accent); }
+        .blog-body pre code { background: none; padding: 0; }
+        .blog-body ul, .blog-body ol { color: var(--text-dim); margin: 0 0 1rem 1.5rem; }
+        
+        /* Media */
+        .media-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .media-stat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .media-stat-num {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        .media-stat-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .media-filters {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .filter-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 0.4rem 0.75rem;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .filter-btn:hover { border-color: var(--text-dim); color: var(--text); }
+        .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        
+        .media-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .media-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.85rem 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+        }
+        
+        .media-info { flex: 1; }
+        .media-title { font-size: 0.9rem; margin-bottom: 0.15rem; }
+        .media-meta { font-size: 0.7rem; color: var(--text-dim); }
+        .media-rating { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+        
+        /* Projects */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .project-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            transition: all 0.15s;
+            display: block;
+            color: var(--text);
+        }
+        
+        .project-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+        
+        .project-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+        
+        .project-desc {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+        }
+        
+        .project-tech {
+            font-size: 0.7rem;
+            color: var(--accent);
+        }
+        
+
+        /* Uses */
+        .uses-section {
+            margin-bottom: 2rem;
+        }
+        
+        .uses-section h3 {
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+        
+        .uses-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        
+        .uses-item {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0.65rem 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .uses-item .label {
+            color: var(--text-dim);
+            min-width: 100px;
+        }
+        
+        /* Changelog */
+        .changelog-item {
+            display: grid;
+            grid-template-columns: 90px 60px 1fr;
+            gap: 1rem;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+        
+        .changelog-date { color: var(--text-dim); }
+        .changelog-version { color: var(--accent); font-weight: 500; }
+        .changelog-text { color: var(--text-dim); }
+        
+
+        /* Footer */
+        .footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        /* Responsive */
+        @media (max-width: 640px) {
+            .now-grid { grid-template-columns: 1fr; }
+            .media-stats { grid-template-columns: repeat(2, 1fr); }
+            .projects-grid { grid-template-columns: 1fr; }
+            .status-bar { flex-direction: column; gap: 0.75rem; }
+            .post-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .focus-stats { flex-wrap: wrap; gap: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo">nordstrom<span>.ws</span></div>
+            <div class="tagline">computer engineering @ kth</div>
+        </header>
+        
+        <nav class="nav">
+            <a onclick="showPage('home')" id="nav-home" class="active">home</a>
+            <a onclick="showPage('blog')" id="nav-blog">blog</a>
+            <a onclick="showPage('media')" id="nav-media">media</a>
+            <a onclick="showPage('projects')" id="nav-projects">projects</a>
+            <a onclick="showPage('uses')" id="nav-uses">uses</a>
+            <a onclick="showPage('changelog')" id="nav-changelog">log</a>
+        </nav>
+        
+        <!-- HOME -->
+        <div id="page-home" class="page active">
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot"></span>
+                    <span class="status-value">online</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">uptime:</span>
+                    <span class="status-value accent" id="uptime">0d 0h 0m</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">local:</span>
+                    <span class="status-value" id="clock">00:00</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">location: stockholm</span>
+                </div>
+            </div>
+            
+            <div class="section about">
+                <div class="section-title">about</div>
+                <p>
+                    hi, i'm <span class="highlight">pontus</span>. i study computer engineering at kth in stockholm 
+                    and spend most of my free time playing old games & exploring <span class="highlight">retro graphics</span>
+                    and rendering techniques.
+                </p>
+                <p>
+                    i think there's something beautiful about making things work within tight limitations.
+                    currently building software renderer, and learning about shaders.
+                </p>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">current focus</div>
+                <div class="focus-card">
+                    <div class="focus-header">
+                        <span class="focus-icon">◈</span>
+                        <span class="focus-name">doom-like raycasting engine</span>
+                        <span class="focus-tag">active</span>
+                    </div>
+                    <div class="focus-desc">building a simple raycasting engine</div>
+                    <div class="focus-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 5%"></div>
+                        </div>
+                        <span class="progress-text">5% complete</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">milestones</div>
+                <div class="milestones">
+                    <div class="milestone">
+                        <span class="milestone-year">2025</span>
+                        <span class="milestone-text">started degree @ kth</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">recent posts</div>
+                <div class="post-list" id="home-posts"></div>
+            </div>
+            
+
+        </div>
+        
+
+        <!-- BLOG -->
+        <div id="page-blog" class="page">
+            <div class="section-title">all posts</div>
+            <div class="post-list" id="blog-posts"></div>
+        </div>
+        
+        <!-- POST -->
+        <div id="page-post" class="page">
+            <a href="#" onclick="showPage('blog');return false" class="blog-back">← back</a>
+            <article class="blog-article" id="post-content"></article>
+        </div>
+        
+        <!-- MEDIA -->
+        <div id="page-media" class="page">
+            <div class="section-title">media 2026</div>
+            
+            <div class="media-stats">
+                <div class="media-stat"><div class="media-stat-num" id="stat-anime">0</div><div class="media-stat-label">anime</div></div>
+                <div class="media-stat"><div class="media-stat-num" id="stat-games">0</div><div class="media-stat-label">games</div></div>
+                <div class="media-stat"><div class="media-stat-num" id="stat-manga">0</div><div class="media-stat-label">manga</div></div>
+                <div class="media-stat"><div class="media-stat-num" id="stat-books">0</div><div class="media-stat-label">books</div></div>
+            </div>
+            
+            <div class="media-filters">
+                <button class="filter-btn active" onclick="filterMedia('all')">all</button>
+                <button class="filter-btn" onclick="filterMedia('anime')">anime</button>
+                <button class="filter-btn" onclick="filterMedia('games')">games</button>
+                <button class="filter-btn" onclick="filterMedia('manga')">manga</button>
+                <button class="filter-btn" onclick="filterMedia('books')">books</button>
+            </div>
+            
+            <div class="media-list" id="media-list"></div>
+        </div>
+        
+        <!-- PROJECTS -->
+        <div id="page-projects" class="page">
+            <div class="section-title">projects</div>
+            <div class="projects-grid">
+                <a href="https://github.com/pontuseriknordstrom/nordstrom.ws" target="_blank" class="project-card">
+                    <div class="project-name">nordstrom.ws</div>
+                    <p class="project-desc">you're currently using it</p>
+                    <div class="project-tech">html // css // js</div>
+                </a>
+            </div>
+        </div>
+        
+
+        <!-- USES -->
+        <div id="page-uses" class="page">
+            <div class="section-title">uses</div>
+            
+            <div class="uses-section">
+                <h3>hardware</h3>
+                <div class="uses-list">
+                    <div class="uses-item"><span class="label">laptop</span><span>hp omnibook ultra 14"</span></div>
+                    <div class="uses-item"><span class="label">keyboard</span><span>keychron k2 he</span></div>
+                    <div class="uses-item"><span class="label">headphones</span><span>philips fidelio x2hr</span></div>
+                </div>
+            </div>
+            
+            <div class="uses-section">
+                <h3>software</h3>
+                <div class="uses-list">
+                    <div class="uses-item"><span class="label">os</span><span>fedora (recently switched from Arch)</span></div>
+                    <div class="uses-item"><span class="label">editor</span><span>helix</span></div>
+                    <div class="uses-item"><span class="label">terminal</span><span>alacritty</span></div>
+                </div>
+            </div>
+            
+            <div class="uses-section">
+                <h3>languages</h3>
+                <div class="uses-list">
+                    <div class="uses-item"><span class="label">learning</span><span>c++ & rust</span></div>
+                    <div class="uses-item"><span class="label">want to learn</span><span>zig</span></div>
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- LOG -->
+        <div id="page-changelog" class="page">
+            <div class="section-title">changelog</div>
+            <div class="changelog-item"><span class="changelog-date">2025.11.28</span><span class="changelog-version">v1.0</span><span class="changelog-text">initial release</span></div>
+        </div>
+        
+        <footer class="footer">
+            <span>© 2025 pontus</span>
+            <span><a href="mailto:email@nordstrom.ws">email</a> · <a href="https://github.com/pontuseriknordstrom">github</a></span>
+        </footer>
+    </div>
+
+    <script>
+    /*
+     * ============================================
+     *                    DATA
+     * ============================================
+     */
+    
+    // blog posts (add new ones at the top)
+    // content is markdown
+    const posts = [
+        { slug: 'pc-gaming', title: 'im done with pc gaming', date: '2025.11.28', tag: 'rant' },
+    ];
+    
+    // media tracker
+    // note is optional
+    const media = [
+        { title: 'hunter x hunter (2011)', type: 'anime', rating: 10, date: '2025.11.28', note: 'rewatching one of the goats' },
+        /*
+        { title: 'title', type: 'anime', rating: 10, date: '2025.11.28', note: 'optional note' },
+        { title: 'title', type: 'games', rating: 10, date: '2025.11.28', note: 'optional note' },
+        { title: 'title', type: 'manga', rating: 10, date: '2025.11.28', note: 'optional note' },
+        { title: 'title', type: 'books', rating: 10, date: '2025.11.28', note: 'optional note' },
+        */
+    ];
+    
+    /*
+     * ============================================
+     * UPTIME COUNTER
+     * calculated from a fixed launch date so it
+     * works the same for everyone (no backend needed)
+     * ============================================
+     */
+    const LAUNCH_DATE = new Date('2025-11-28').getTime();
+    
+    function updateUptime() {
+        const d = Date.now() - LAUNCH_DATE;
+        const days = Math.floor(d/864e5), hrs = Math.floor((d%864e5)/36e5), mins = Math.floor((d%36e5)/6e4);
+        document.getElementById('uptime').textContent = `${days}d ${hrs}h ${mins}m`;
+    }
+    updateUptime(); 
+    setInterval(updateUptime, 60000);
+    
+    /*
+     * ============================================
+     * LIVE CLOCK (stockholm time)
+     * ============================================
+     */
+    function updateClock() {
+        const now = new Date();
+        const stockholm = now.toLocaleTimeString('en-SE', { 
+            timeZone: 'Europe/Stockholm', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        document.getElementById('clock').textContent = stockholm;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+   
+    /*
+     * ============================================
+     * NAVIGATION
+     * simple page switching, no router needed
+     * ============================================
+     */
+    function showPage(p) {
+        document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+        document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active'));
+        document.getElementById(`page-${p}`).classList.add('active');
+        document.getElementById(`nav-${p}`)?.classList.add('active');
+        scrollTo(0,0);
+    }
+    window.showPage = showPage;
+    
+    /*
+     * ============================================
+     * BLOG
+     * renders posts from the array above
+     * markdown (marked.js)
+     * ============================================
+     */
+    function renderPosts(id, limit) {
+        document.getElementById(id).innerHTML = (limit ? posts.slice(0,limit) : posts).map(p => `
+            <div class="post-item" onclick="showPost('${p.slug}')">
+                <span class="post-date">${p.date}</span>
+                <span class="post-title">${p.title}</span>
+                <span class="post-tag">${p.tag}</span>
+            </div>
+        `).join('');
+    }
+    
+    function showPost(slug) {
+        // find the post metadata
+        const post = posts.find(p => p.slug === slug);
+    
+        fetch(`posts/${slug}.md`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('post content not found');
+                }
+                return response.text();  // read the content as text
+            })
+            .then(markdownContent => {
+                const htmlContent = marked.parse(markdownContent);
+
+                document.getElementById('post-content').innerHTML = `
+                    <div class="blog-meta">${post.date} · ${post.tag}</div>
+                    <div class="blog-body">${htmlContent}</div>
+                `;
+
+                showPage('post');
+            })
+            .catch(error => {
+                console.error('Error fetching the post content:', error);
+                document.getElementById('post-content').innerHTML = `<p>could not load the post content.</p>`;
+            });
+    }
+    
+    // render posts on page load
+    renderPosts('home-posts', 3);   // show 3 on home
+    renderPosts('blog-posts');      // show all on blog page
+    
+    /*
+     * ============================================
+     * MEDIA TRACKER
+     * filter by type, counts update automatically
+     * ============================================
+     */
+    function renderMedia(f='all') {
+        const items = f==='all' ? media : media.filter(m => m.type===f);
+        document.getElementById('media-list').innerHTML = items.map(m => `
+            <div class="media-item">
+                <div class="media-info">
+                    <div class="media-title">${m.title}</div>
+                    <div class="media-meta">${m.type}${m.note?' · '+m.note:''}</div>
+                </div>
+                <div class="media-rating">${m.rating}/10</div>
+            </div>
+        `).join('');
+        
+        // update the stat counters
+        ['anime','games','manga','books'].forEach(t => 
+            document.getElementById(`stat-${t}`).textContent = media.filter(m=>m.type===t).length
+        );
+    }
+    
+    function filterMedia(t) { 
+        document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); 
+        event.target.classList.add('active'); 
+        renderMedia(t); 
+    }
+    window.filterMedia = filterMedia;
+    
+    // render media on page load
+    renderMedia();
+
+    </script>
+</body>
+</html>
